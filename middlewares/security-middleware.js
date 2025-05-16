@@ -14,7 +14,8 @@ function securityMiddleware(req, res, next) {
         if (!clientConfig) return res.status(401).json({error: 'Invalid API key'})
 
         // Validate IP Address
-        const ipAllowed = ipRangeCheck(clientIP, clientConfig.allowedIPs)
+        let ipAllowed = clientConfig.allowedIPs.includes('*')
+            || ipRangeCheck(clientIP, clientConfig.allowedIPs)
 
         if (!ipAllowed) return res.status(403).json({error: 'unauthorized'})
 
