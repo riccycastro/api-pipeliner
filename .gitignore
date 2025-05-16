@@ -1,6 +1,8 @@
 .env.local
+pipeline-config.yml
 security-config.yml
 
+.idea
 data/jobs/*
 data/logs/*
 node_modules
