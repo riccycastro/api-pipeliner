@@ -1,0 +1,8 @@
+apiKeys:
+  - key: "DEV_SECRET"
+    allowedCommands: ["restart", "deploy_service", "restart-middleware"]
+    allowedIPs: ["127.0.0.1/32", "192.168.1.0/24", "::1"]
+
+  - key: "PROD_SECRET"
+    allowedCommands: ["*"]
+    allowedIPs: ["10.0.0.0/8"]

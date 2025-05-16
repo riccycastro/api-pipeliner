@@ -1,0 +1,6 @@
+.env.local
+security-config.yml
+
+data/jobs/*
+data/logs/*
+node_modules

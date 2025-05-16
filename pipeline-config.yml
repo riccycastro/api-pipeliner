@@ -1,0 +1,33 @@
+commands:
+  restart:
+    context: host
+    execute:
+      - echo "restarting $service_name"
+      - docker restart $service_name
+      - echo "$service_name restarted"
+    parameters: [service_name]
+
+  restart-middleware:
+    context: host
+    execute:
+      - echo "Putting middleware down"
+      - docker compose -f ${COMPOSE_FILE} --profile=${COMPOSE_PROFILE} --env-file=${COMPOSE_ENV_FILE} down middleware
+      - echo "Building middleware with no cache"
+      - docker compose -f ${COMPOSE_FILE} --profile=${COMPOSE_PROFILE} --env-file=${COMPOSE_ENV_FILE} build middleware --no-cache
+      - echo "Deploying new middleware version"
+      - docker compose -f ${COMPOSE_FILE} --profile=${COMPOSE_PROFILE} --env-file=${COMPOSE_ENV_FILE} up -d
+
+  deploy_service:
+    context: host
+    execute:
+      - echo "Stopping service $service_name"
+      - docker stop $service_name || true
+      - echo "Removing service $service_name"
+      - docker rm $service_name || true
+      - echo "Running service $service_name"
+      - docker run -d --name $service_name $image_name:$image_tag
+    parameters: [service_name, image_name, image_tag]
+
+  pull_latest:
+    context: host
+    execute: git pull
