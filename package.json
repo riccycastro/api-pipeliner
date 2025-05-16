@@ -14,6 +14,7 @@
     "nodemon": "^3.1.10"
   },
   "scripts": {
-    "dev": "nodemon --ignore data index.js"
+    "dev": "nodemon --ignore data index.js",
+    "prod": "node index.js"
   }
 }
