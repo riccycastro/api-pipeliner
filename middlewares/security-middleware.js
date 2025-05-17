@@ -11,13 +11,18 @@ function securityMiddleware(req, res, next) {
 
         // Validate API Key
         const clientConfig = SECURITY_CONFIG.apiKeys.find(k => k.key === apiKey)
-        if (!clientConfig) return res.status(401).json({error: 'Invalid API key'})
-
+        if (!clientConfig) {
+            console.log('Invalid API key: ', apiKey)
+            return res.status(401).json({error: 'Forbidden'})
+        }
         // Validate IP Address
         let ipAllowed = clientConfig.allowedIPs.includes('*')
             || ipRangeCheck(clientIP, clientConfig.allowedIPs)
 
-        if (!ipAllowed) return res.status(403).json({error: 'unauthorized'})
+        if (!ipAllowed) {
+            console.log('IP not allowed: ', clientIP)
+            return res.status(403).json({error: 'Unauthorized'})
+        }
 
         if (req.method === 'POST') {
             // Validate Command Permission
@@ -26,15 +31,16 @@ function securityMiddleware(req, res, next) {
             const commandAllowed =
                 clientConfig.allowedCommands.includes('*') ||
                 clientConfig.allowedCommands.includes(requestedAction)
-            if (!commandAllowed)
-                return res.status(403).json({error: 'Command not permitted'})
-
+            if (!commandAllowed) {
+                console.log('Command not permitted')
+                return res.status(403).json({error: 'Unauthorized'})
+            }
             req.securityContext = clientConfig
         }
         next()
     } catch (error) {
         console.error('Security middleware error:', error.message)
-        res.status(500).json({error: 'Security middleware error'})
+        res.status(500).json({error: 'Server error, please try again later!'})
     }
 }
 

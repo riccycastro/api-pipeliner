@@ -28,6 +28,14 @@ function getBaseLogsDir() {
     return getDir(`logs`)
 }
 
+function getCommandsDir() {
+    return getDir(`commands`)
+}
+
+function checkCommandFileExists(filename) {
+    return fssync.existsSync(path.join(getCommandsDir(), filename))
+}
+
 function getDir(directoryName) {
     const dir = path.join(getDataDir(), directoryName)
 
@@ -75,4 +83,6 @@ module.exports = {
     findJobFileRecursively,
     getLogsDir,
     findLogsFileRecursively,
+    getCommandsDir,
+    checkCommandFileExists,
 }

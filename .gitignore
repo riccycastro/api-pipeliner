@@ -3,6 +3,7 @@ pipeline-config.yml
 security-config.yml
 
 .idea
+data/commands/*
 data/jobs/*
 data/logs/*
 node_modules

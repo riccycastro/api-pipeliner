@@ -46,7 +46,7 @@ app.post('/webhook', createRateLimitMiddleware(), async (req, res) => {
 
     const logger = getLogger('MAIN', jobId)
 
-    const {action, target, options = {}} = req.body;
+    const {action, target, options = {}, triggered_by} = req.body;
 
     const commandSpec = COMMAND_CONFIG.commands[action]
     if (!commandSpec) {
@@ -61,6 +61,7 @@ app.post('/webhook', createRateLimitMiddleware(), async (req, res) => {
         id: jobId,
         created: new Date().toISOString(),
         status: 'processing',
+        triggered_by,
         action,
         target,
         options,
@@ -74,6 +75,7 @@ app.post('/webhook', createRateLimitMiddleware(), async (req, res) => {
             commandSpec,
             parameters,
             jobFile,
+            options,
             envVars: process.env,
         }
     });
