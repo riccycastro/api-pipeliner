@@ -17,16 +17,10 @@ commands:
       - echo "Deploying new middleware version"
       - docker compose -f ${COMPOSE_FILE} --profile=${COMPOSE_PROFILE} --env-file=${COMPOSE_ENV_FILE} up -d
 
-  deploy_service:
+  service-deploy:
     context: host
     execute:
-      - echo "Stopping service $service_name"
-      - docker stop $service_name || true
-      - echo "Removing service $service_name"
-      - docker rm $service_name || true
-      - echo "Running service $service_name"
-      - docker run -d --name $service_name $image_name:$image_tag
-    parameters: [service_name, image_name, image_tag]
+      - { type: file, filename: 'service_deployer.sh' }
 
   pull_latest:
     context: host
