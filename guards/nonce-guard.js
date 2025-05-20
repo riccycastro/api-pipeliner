@@ -3,7 +3,7 @@ const crypto = require('crypto')
 function handle(securityConfig, req) {
     const clientNonce = req.header('x-client-nonce') || req.query.clientNonce || ''
     const clientNonceTimestamp = req.header('x-client-nonce-timestamp') || req.query.clientNonceTimestamp || 0
-    const clientHash = req.header('x-hmac') || req.query.hmac || ''
+    const clientHash = req.header('x-signature') || req.query.signature || ''
 
     if (!isFresh(clientNonceTimestamp)) {
         throw new Error('Invalid client nonce timestamp: ' + clientNonceTimestamp)
