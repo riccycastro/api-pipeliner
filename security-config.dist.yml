@@ -1,11 +1,11 @@
-apiKeys:
-  - key: "DEV_SECRET"
+keys:
+  DEV_SECRET:
     allowedCommands: ["restart", "deploy_service", "restart-middleware"]
     allowedIPs: ["127.0.0.1/32", "192.168.1.0/24", "::1"]
     secret: 'secret-hash'
     type: 'nonce'
 
-  - key: "PROD_SECRET"
+  PROD_SECRET:
     allowedCommands: ["*"]
     allowedIPs: ["10.0.0.0/8"]
     apiKey: 'api-key-secret'
