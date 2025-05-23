@@ -26,14 +26,6 @@ if (fssync.existsSync('.env.local')) {
 
 const crypto = require('crypto')
 
-console.log(
-    crypto
-        .createHmac('sha256', '7cf2012c-967a-4e2e-9827-ac508432db4e')
-        .update('9827' + Math.floor(Date.now() / 1000) + '{"action":"restart-middleware","target":"acount-middleware","triggered_by":"riccycastro","options":{"environment":"dev","branch_or_tag":"master","composer":"Yes","migration":"Yes"}}')
-        .digest('hex'),
-    Math.floor(Date.now() / 1000)
-)
-
 const createRateLimitMiddleware = require('./middlewares/rate-limit-middleware')
 const securityMiddleware = require('./middlewares/security-middleware.js')
 
