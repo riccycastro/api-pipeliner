@@ -24,8 +24,6 @@ if (fssync.existsSync('.env.local')) {
     console.log('.env.local not found, skipping.')
 }
 
-const crypto = require('crypto')
-
 const createRateLimitMiddleware = require('./middlewares/rate-limit-middleware')
 const securityMiddleware = require('./middlewares/security-middleware.js')
 
