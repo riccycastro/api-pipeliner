@@ -259,17 +259,108 @@ keys:
     type: 'nonce'
 ```
 
-Security types:
-- `nonce`: Requires a nonce-based authentication
-- `api-key`: Simple API key authentication
+**Key Configuration Properties:**
+
+- `allowedCommands`: A list of command names defined in `pipeline-config.yml` that this key is allowed to execute. Use `['*']` to allow all commands.
+- `allowedIPs`: A list of IP addresses or CIDR ranges that are allowed to use this key. Use `['*']` to allow all IPs.
+- `type`: The authentication type to use with this key (`nonce` or `api-key`).
+- `secret`: (For `nonce` type) A secret key used for HMAC signature verification.
+- `apiKey`: (For `api-key` type) The API key value for simple authentication.
+
+#### Authentication Types
+
+API Pipeliner supports two authentication methods:
+
+1. **API Key Authentication (`api-key`)**
+   - Simple authentication using an API key
+   - Provide the key in the `X-API-Key` header or `key` query parameter
+
+2. **Nonce-based Authentication (`nonce`)**
+   - More secure authentication using a nonce, timestamp, and HMAC signature
+   - Provides protection against replay attacks and request tampering
+   - Requires additional headers for authentication (see below)
+
+#### Nonce Authentication Process
+
+The nonce authentication method requires the following steps:
+
+1. **Generate a Client Nonce**
+   - Create a random string (UUID recommended)
+   - This should be unique for each request
+
+2. **Create a Timestamp**
+   - Use the current Unix timestamp in seconds
+   - The timestamp must be within 5 minutes of the server time
+
+3. **Generate the Signature**
+   - Concatenate the client nonce, timestamp, and the JSON-stringified request body
+   - Create an HMAC-SHA256 hash of this string using your secret key
+   - Convert the hash to a hexadecimal string
+
+4. **Send the Request with Required Headers**
+   - `X-Client-Nonce`: The generated client nonce
+   - `X-Client-Nonce-Timestamp`: The timestamp in seconds
+   - `X-Signature`: The generated HMAC signature
+
+**Example Client Implementation (Node.js):**
+
+```javascript
+const crypto = require('crypto');
+const axios = require('axios');
+
+async function sendAuthenticatedRequest(apiUrl, secret, requestBody) {
+  // Generate nonce (random UUID or other unique string)
+  const clientNonce = crypto.randomUUID();
+  
+  // Current timestamp in seconds
+  const timestamp = Math.floor(Date.now() / 1000);
+  
+  // Create signature
+  const signature = crypto
+    .createHmac('sha256', secret)
+    .update(clientNonce + timestamp + JSON.stringify(requestBody))
+    .digest('hex');
+  
+  // Send request with authentication headers
+  try {
+    const response = await axios.post(apiUrl, requestBody, {
+      headers: {
+        'X-Client-Nonce': clientNonce,
+        'X-Client-Nonce-Timestamp': timestamp,
+        'X-Signature': signature,
+        'Content-Type': 'application/json'
+      }
+    });
+    
+    return response.data;
+  } catch (error) {
+    console.error('Authentication error:', error.response?.data || error.message);
+    throw error;
+  }
+}
+
+// Example usage
+const requestBody = {
+  action: 'restart',
+  target: 'web-server',
+  options: {
+    graceful: true
+  },
+  triggered_by: 'deployment-system'
+};
+
+sendAuthenticatedRequest(
+  'https://your-api-pipeliner.example.com/webhook',
+  'your-secret-key',
+  requestBody
+)
+  .then(response => console.log('Success:', response))
+  .catch(error => console.error('Failed:', error));
+```
 
 ### Environment Variables
 
-Create a `.env` file with the following variables:
-- `PORT`: The port to run the API server (default: 3000)
-- `COMPOSE_FILE`: Path to docker-compose file (for docker-compose commands)
-- `COMPOSE_PROFILE`: Docker compose profile to use
-- `COMPOSE_ENV_FILE`: Environment file for docker-compose
+Create a `.env.local` by duplicating the `.env`
 
 ## Usage
 
