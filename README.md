@@ -13,7 +13,7 @@ API Pipeliner is a lightweight, configurable API service that allows you to trig
 
 ## Requirements
 
-- Node.js (v14 or higher recommended)
+- Node.js (v22.15.1 or higher recommended)
 - Docker (for Docker-related commands)
 - Git (for git-related commands)
 
@@ -21,7 +21,7 @@ API Pipeliner is a lightweight, configurable API service that allows you to trig
 
 1. Clone the repository:
    ```bash
-   git clone https://github.com/yourusername/api-pipeliner.git
+   git clone git@github.com:riccycastro/api-pipeliner.git
    cd api-pipeliner
    ```
 
