@@ -13,7 +13,6 @@ function securityMiddleware(req, res, next) {
         // Validate API Key
         const securityConfig = SECURITY_CONFIG.keys[key]
         if (!securityConfig) {
-            console.log('Invalid key: ', key)
             return res.status(401).json({error: 'Forbidden'})
         }
 
