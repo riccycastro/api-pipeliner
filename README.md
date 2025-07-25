@@ -308,7 +308,7 @@ The nonce authentication method requires the following steps:
 const crypto = require('crypto');
 const axios = require('axios');
 
-async function sendAuthenticatedRequest(apiUrl, secret, requestBody) {
+async function sendAuthenticatedRequest(apiUrl, secret, $key, requestBody) {
   // Generate nonce (random UUID or other unique string)
   const clientNonce = crypto.randomUUID();
   
@@ -325,6 +325,7 @@ async function sendAuthenticatedRequest(apiUrl, secret, requestBody) {
   try {
     const response = await axios.post(apiUrl, requestBody, {
       headers: {
+        'X-Key': $key,  
         'X-Client-Nonce': clientNonce,
         'X-Client-Nonce-Timestamp': timestamp,
         'X-Signature': signature,
