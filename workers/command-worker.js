@@ -89,7 +89,7 @@ async function run() {
                 });
 
                 child.stdout.on('data', data =>
-                    logger(`STDOUT: ${data.toString().trim()}`, false))
+                    logger(`STDOUT: ${data.toString().trim()}`))
 
                 child.stderr.on('data', data =>
                     logger(`STDERR: ${data.toString().trim()}`))
