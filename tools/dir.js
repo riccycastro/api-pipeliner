@@ -2,26 +2,58 @@ const path = require('path')
 const fssync = require('fs')
 const fs = require('fs').promises
 
-const currentDate = new Date()
-let month = (currentDate.getMonth() + 1) + ''
-
-if (month.length < 2) {
-    month = '0' + month;
+/**
+ * Gets the year and month in format YYYYMM for the given date or current date
+ * @param {string|Date|null} date - Optional date parameter, can be:
+ *                                 - string in YYYYMM format
+ *                                 - Date object
+ *                                 - null (will use current date)
+ * @returns {string} - Year and month in format YYYYMM
+ */
+function getYearMonthSubdirectory(date = null) {
+    // If date is already a string in YYYYMM format, return it directly
+    if (typeof date === 'string' && date.length === 6 && !isNaN(date)) {
+        return date
+    }
+    
+    // Otherwise, use the date object or create a new one for current date
+    const targetDate = date || new Date()
+    let month = (targetDate.getMonth() + 1) + ''
+    
+    if (month.length < 2) {
+        month = '0' + month;
+    }
+    
+    const year = targetDate.getFullYear()
+    return `${year}${month}`
 }
 
-const year = currentDate.getFullYear()
-const subDirectory = `${year}${month}`
-
+/**
+ * Gets the jobs directory path with year/month subdirectory
+ * @param {string|Date|null} date - Optional date parameter, can be:
+ *                                 - string in YYYYMM format
+ *                                 - Date object
+ *                                 - null (will use current date)
+ * @returns {string} - Path to the jobs directory
+ */
 function getJobsDir(date = null) {
-    return getDir(`jobs/${date ? date : subDirectory}`)
+    return getDir(`jobs/${getYearMonthSubdirectory(date)}`)
 }
 
 function getBaseJobsDir() {
     return getDir(`jobs`)
 }
 
-function getLogsDir() {
-    return getDir(`logs/${subDirectory}`)
+/**
+ * Gets the logs directory path with year/month subdirectory
+ * @param {string|Date|null} date - Optional date parameter, can be:
+ *                                 - string in YYYYMM format
+ *                                 - Date object
+ *                                 - null (will use current date)
+ * @returns {string} - Path to the logs directory
+ */
+function getLogsDir(date = null) {
+    return getDir(`logs/${getYearMonthSubdirectory(date)}`)
 }
 
 function getBaseLogsDir() {

@@ -111,7 +111,13 @@ app.post('/webhook', createRateLimitMiddleware(), async (req, res) => {
 
 // --- List all jobs ---
 app.get('/jobs', createRateLimitMiddleware({max: 30}), async (req, res) => {
-    const JOBS_DIR = getJobsDir(req.query.date)
+    // Validate date format if provided (should be YYYYMM)
+    let dateParam = req.query.date;
+    if (dateParam && (dateParam.length !== 6 || isNaN(dateParam))) {
+        return res.status(400).json({error: 'Date must be in YYYYMM format'});
+    }
+    
+    const JOBS_DIR = getJobsDir(dateParam)
 
     try {
         const files = await fs.readdir(JOBS_DIR)
