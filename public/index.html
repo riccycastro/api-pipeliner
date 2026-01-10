@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>API Pipeliner Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        [v-cloak] { display: none; }
+    </style>
+</head>
+<body class="bg-gray-100 font-sans leading-normal tracking-normal">
+    <div id="app" class="container mx-auto p-4">
+        <header class="flex flex-col md:flex-row justify-between items-center py-6 gap-4">
+            <h1 class="text-3xl font-bold text-gray-800">API Pipeliner</h1>
+            <div class="flex items-center space-x-2 w-full md:w-auto">
+                <input type="password" id="apiKey" placeholder="API Key" class="border p-2 rounded flex-grow" />
+                <button onclick="saveKey()" class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 whitespace-nowrap">Save Key</button>
+            </div>
+        </header>
+
+        <div class="bg-white shadow-md rounded my-6 overflow-hidden">
+            <div class="p-4 flex flex-col sm:flex-row justify-between items-center border-b gap-4">
+                <h2 class="text-xl font-semibold">Jobs</h2>
+                <div class="flex space-x-2 w-full sm:w-auto">
+                    <input type="text" id="dateFilter" placeholder="YYYYMM" class="border p-2 rounded w-full sm:w-24" title="Format: YYYYMM" />
+                    <button onclick="fetchJobs()" class="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600 whitespace-nowrap">Refresh</button>
+                </div>
+            </div>
+            <div class="overflow-x-auto">
+                <table class="min-w-full bg-white">
+                    <thead>
+                        <tr class="w-full bg-gray-200 text-gray-600 uppercase text-sm leading-normal">
+                            <th class="py-3 px-6 text-left">Created</th>
+                            <th class="py-3 px-6 text-left">Triggered By</th>
+                            <th class="py-3 px-6 text-left">Action</th>
+                            <th class="py-3 px-6 text-left">Target</th>
+                            <th class="py-3 px-6 text-left">Status</th>
+                            <th class="py-3 px-6 text-center">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="jobsTable" class="text-gray-600 text-sm font-light">
+                        <tr>
+                            <td colspan="6" class="py-10 text-center text-gray-400">Enter API Key and click Refresh to load jobs</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Log Modal -->
+        <div id="logModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full hidden z-50">
+            <div class="relative top-10 mx-auto p-5 border w-11/12 md:w-5/6 shadow-lg rounded-md bg-white">
+                <div class="flex justify-between items-center border-b pb-3">
+                    <h3 class="text-xl font-semibold truncate mr-4" id="modalTitle">Job Logs</h3>
+                    <button onclick="closeModal()" class="text-gray-400 hover:text-gray-600 text-2xl">&times;</button>
+                </div>
+                <div class="mt-4">
+                    <pre id="logContent" class="bg-gray-900 text-green-400 p-4 rounded overflow-auto text-xs font-mono" style="height: 65vh;"></pre>
+                </div>
+                <div class="flex justify-end mt-4">
+                    <button onclick="closeModal()" class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const apiKeyInput = document.getElementById('apiKey');
+        const dateFilter = document.getElementById('dateFilter');
+        const jobsTable = document.getElementById('jobsTable');
+        const logModal = document.getElementById('logModal');
+        const logContent = document.getElementById('logContent');
+        const modalTitle = document.getElementById('modalTitle');
+
+        // Load key from localStorage
+        const storedKey = localStorage.getItem('pipeliner_key');
+        if (storedKey) {
+            apiKeyInput.value = storedKey;
+        }
+
+        // Set default date filter to current month
+        const now = new Date();
+        const currentMonth = now.getFullYear() + String(now.getMonth() + 1).padStart(2, '0');
+        dateFilter.value = currentMonth;
+
+        function saveKey() {
+            localStorage.setItem('pipeliner_key', apiKeyInput.value);
+            alert('API Key saved!');
+            fetchJobs();
+        }
+
+        async function fetchJobs() {
+            const key = apiKeyInput.value;
+            const date = dateFilter.value;
+            if (!key) {
+                alert('Please enter an API Key');
+                return;
+            }
+
+            jobsTable.innerHTML = '<tr><td colspan="6" class="py-10 text-center text-gray-500">Loading jobs...</td></tr>';
+
+            try {
+                const response = await fetch(`/jobs?date=${date}`, {
+                    headers: { 'x-key': key }
+                });
+
+                if (!response.ok) {
+                    const error = await response.json();
+                    throw new Error(error.error || `HTTP error! status: ${response.status}`);
+                }
+
+                const jobs = await response.json();
+                renderJobs(jobs);
+            } catch (e) {
+                console.error('Error fetching jobs:', e);
+                jobsTable.innerHTML = `<tr><td colspan="6" class="py-10 text-center text-red-500">Error: ${e.message}</td></tr>`;
+            }
+        }
+
+        function renderJobs(jobs) {
+            if (jobs.length === 0) {
+                jobsTable.innerHTML = '<tr><td colspan="6" class="py-10 text-center text-gray-400">No jobs found for this period</td></tr>';
+                return;
+            }
+
+            jobsTable.innerHTML = '';
+            jobs.forEach(job => {
+                const row = document.createElement('tr');
+                row.className = 'border-b border-gray-200 hover:bg-gray-50';
+                
+                const statusClass = {
+                    'completed': 'bg-green-100 text-green-800',
+                    'failed': 'bg-red-100 text-red-800',
+                    'processing': 'bg-blue-100 text-blue-800'
+                }[job.status] || 'bg-gray-100 text-gray-800';
+
+                row.innerHTML = `
+                    <td class="py-3 px-6 text-left whitespace-nowrap font-mono text-xs">${new Date(job.created).toLocaleString()}</td>
+                    <td class="py-3 px-6 text-left">${job.triggered_by || '-'}</td>
+                    <td class="py-3 px-6 text-left">${job.action}</td>
+                    <td class="py-3 px-6 text-left">${job.target}</td>
+                    <td class="py-3 px-6 text-left">
+                        <span class="${statusClass} py-1 px-3 rounded-full text-xs font-semibold">${job.status}</span>
+                    </td>
+                    <td class="py-3 px-6 text-center">
+                        <button onclick="viewLogs('${job.id}')" class="text-blue-600 hover:text-blue-900 font-medium">View Logs</button>
+                    </td>
+                `;
+                jobsTable.appendChild(row);
+            });
+        }
+
+        async function viewLogs(jobId) {
+            const key = apiKeyInput.value;
+            modalTitle.innerText = `Logs for Job: ${jobId}`;
+            logContent.innerText = 'Loading logs...';
+            logModal.classList.remove('hidden');
+            document.body.style.overflow = 'hidden'; // Prevent scroll
+
+            try {
+                const response = await fetch(`/jobs/${jobId}/logs`, {
+                    headers: { 'x-key': key }
+                });
+
+                if (!response.ok) {
+                    const error = await response.text();
+                    throw new Error(error || `HTTP error! status: ${response.status}`);
+                }
+
+                const logs = await response.text();
+                logContent.innerText = logs;
+            } catch (e) {
+                logContent.innerText = 'Error loading logs: ' + e.message;
+            }
+        }
+
+        function closeModal() {
+            logModal.classList.add('hidden');
+            document.body.style.overflow = 'auto'; // Restore scroll
+        }
+
+        // Close modal on escape key
+        window.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') closeModal();
+        });
+
+        // Initial fetch
+        if (apiKeyInput.value) {
+            fetchJobs();
+        }
+    </script>
+</body>
+</html>
