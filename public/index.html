@@ -14,8 +14,9 @@
         <header class="flex flex-col md:flex-row justify-between items-center py-6 gap-4">
             <h1 class="text-3xl font-bold text-gray-800">API Pipeliner</h1>
             <div class="flex items-center space-x-2 w-full md:w-auto">
+                <input type="text" id="keyId" placeholder="Key ID" class="border p-2 rounded w-full md:w-32" />
                 <input type="password" id="apiKey" placeholder="API Key" class="border p-2 rounded flex-grow" />
-                <button onclick="saveKey()" class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 whitespace-nowrap">Save Key</button>
+                <button onclick="saveKey()" class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 whitespace-nowrap">Save</button>
             </div>
         </header>
 
@@ -70,6 +71,7 @@
     </div>
 
     <script>
+        const keyIdInput = document.getElementById('keyId');
         const apiKeyInput = document.getElementById('apiKey');
         const dateFilter = document.getElementById('dateFilter');
         const jobsTable = document.getElementById('jobsTable');
@@ -82,10 +84,14 @@
         let logInterval = null;
         let currentJobId = null;
 
-        // Load key from localStorage
-        const storedKey = localStorage.getItem('pipeliner_key');
-        if (storedKey) {
-            apiKeyInput.value = storedKey;
+        // Load keys from localStorage
+        const storedKeyId = localStorage.getItem('pipeliner_key_id') || localStorage.getItem('pipeliner_key');
+        if (storedKeyId) {
+            keyIdInput.value = storedKeyId;
+        }
+        const storedApiKey = localStorage.getItem('pipeliner_api_key');
+        if (storedApiKey) {
+            apiKeyInput.value = storedApiKey;
         }
 
         // Set default date filter to current month
@@ -94,16 +100,29 @@
         dateFilter.value = currentMonth;
 
         function saveKey() {
-            localStorage.setItem('pipeliner_key', apiKeyInput.value);
-            alert('API Key saved!');
+            localStorage.setItem('pipeliner_key_id', keyIdInput.value);
+            localStorage.setItem('pipeliner_api_key', apiKeyInput.value);
+            // Cleanup old key
+            localStorage.removeItem('pipeliner_key');
+            alert('Settings saved!');
             fetchJobs();
         }
 
+        function getHeaders() {
+            const headers = {
+                'x-key': keyIdInput.value
+            };
+            if (apiKeyInput.value) {
+                headers['x-api-key'] = apiKeyInput.value;
+            }
+            return headers;
+        }
+
         async function fetchJobs() {
-            const key = apiKeyInput.value;
+            const keyId = keyIdInput.value;
             const date = dateFilter.value;
-            if (!key) {
-                alert('Please enter an API Key');
+            if (!keyId) {
+                alert('Please enter a Key ID');
                 return;
             }
 
@@ -111,7 +130,7 @@
 
             try {
                 const response = await fetch(`/jobs?date=${date}`, {
-                    headers: { 'x-key': key }
+                    headers: getHeaders()
                 });
 
                 if (!response.ok) {
@@ -161,7 +180,6 @@
         }
 
         async function viewLogs(jobId) {
-            const key = apiKeyInput.value;
             currentJobId = jobId;
             modalTitle.innerText = `Logs for Job: ${jobId}`;
             logContent.innerText = 'Loading logs...';
@@ -175,27 +193,27 @@
             try {
                 // First fetch logs and status
                 await Promise.all([
-                    refreshLogs(jobId, key),
-                    updateModalStatus(jobId, key)
+                    refreshLogs(jobId),
+                    updateModalStatus(jobId)
                 ]);
 
                 // If status is processing, start polling
-                const response = await fetch(`/jobs/${jobId}`, { headers: { 'x-key': key } });
+                const response = await fetch(`/jobs/${jobId}`, { headers: getHeaders() });
                 const job = await response.json();
                 
                 if (job.status === 'processing') {
                     liveBadge.classList.remove('hidden');
-                    logInterval = setInterval(() => pollLogs(jobId, key), 3000);
+                    logInterval = setInterval(() => pollLogs(jobId), 3000);
                 }
             } catch (e) {
                 logContent.innerText = 'Error loading logs: ' + e.message;
             }
         }
 
-        async function pollLogs(jobId, key) {
+        async function pollLogs(jobId) {
             try {
-                await refreshLogs(jobId, key);
-                const status = await updateModalStatus(jobId, key);
+                await refreshLogs(jobId);
+                const status = await updateModalStatus(jobId);
                 
                 if (status !== 'processing') {
                     if (logInterval) clearInterval(logInterval);
@@ -208,9 +226,9 @@
             }
         }
 
-        async function refreshLogs(jobId, key) {
+        async function refreshLogs(jobId) {
             const response = await fetch(`/jobs/${jobId}/logs`, {
-                headers: { 'x-key': key }
+                headers: getHeaders()
             });
 
             if (response.ok) {
@@ -222,9 +240,9 @@
             }
         }
 
-        async function updateModalStatus(jobId, key) {
+        async function updateModalStatus(jobId) {
             const response = await fetch(`/jobs/${jobId}`, {
-                headers: { 'x-key': key }
+                headers: getHeaders()
             });
 
             if (response.ok) {
@@ -262,7 +280,7 @@
         });
 
         // Initial fetch
-        if (apiKeyInput.value) {
+        if (keyIdInput.value) {
             fetchJobs();
         }
     </script>
