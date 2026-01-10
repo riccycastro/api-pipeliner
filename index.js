@@ -140,7 +140,7 @@ app.get('/jobs', createRateLimitMiddleware({max: 30}), async (req, res) => {
 })
 
 // --- Get job metadata ---
-app.get('/jobs/:id', createRateLimitMiddleware({max: 3, windowMs: 60 * 1000}), async (req, res) => {
+app.get('/jobs/:id', createRateLimitMiddleware({max: 60, windowMs: 60 * 1000}), async (req, res) => {
     try {
         const jonFilename = `${req.params.id}.json`
         const jobPath = await findJobFileRecursively(jonFilename)
@@ -157,7 +157,7 @@ app.get('/jobs/:id', createRateLimitMiddleware({max: 3, windowMs: 60 * 1000}), a
 })
 
 // --- Get job logs ---
-app.get('/jobs/:id/logs', createRateLimitMiddleware({max: 20, windowMs: 60 * 1000}), async (req, res) => {
+app.get('/jobs/:id/logs', createRateLimitMiddleware({max: 60, windowMs: 60 * 1000}), async (req, res) => {
     try {
         const logFilename = `${req.params.id}.log`
         const logPath = await findLogsFileRecursively(logFilename)

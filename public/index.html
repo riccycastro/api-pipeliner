@@ -52,7 +52,11 @@
         <div id="logModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full hidden z-50">
             <div class="relative top-10 mx-auto p-5 border w-11/12 md:w-5/6 shadow-lg rounded-md bg-white">
                 <div class="flex justify-between items-center border-b pb-3">
-                    <h3 class="text-xl font-semibold truncate mr-4" id="modalTitle">Job Logs</h3>
+                    <div class="flex items-center truncate mr-4">
+                        <h3 class="text-xl font-semibold truncate" id="modalTitle">Job Logs</h3>
+                        <span id="liveBadge" class="ml-3 px-2 py-0.5 rounded text-xs font-bold bg-red-500 text-white animate-pulse hidden">● LIVE</span>
+                        <span id="jobStatusBadge" class="ml-2 px-2 py-0.5 rounded text-xs font-semibold bg-gray-100 text-gray-800"></span>
+                    </div>
                     <button onclick="closeModal()" class="text-gray-400 hover:text-gray-600 text-2xl">&times;</button>
                 </div>
                 <div class="mt-4">
@@ -72,6 +76,11 @@
         const logModal = document.getElementById('logModal');
         const logContent = document.getElementById('logContent');
         const modalTitle = document.getElementById('modalTitle');
+        const liveBadge = document.getElementById('liveBadge');
+        const jobStatusBadge = document.getElementById('jobStatusBadge');
+
+        let logInterval = null;
+        let currentJobId = null;
 
         // Load key from localStorage
         const storedKey = localStorage.getItem('pipeliner_key');
@@ -153,29 +162,96 @@
 
         async function viewLogs(jobId) {
             const key = apiKeyInput.value;
+            currentJobId = jobId;
             modalTitle.innerText = `Logs for Job: ${jobId}`;
             logContent.innerText = 'Loading logs...';
             logModal.classList.remove('hidden');
             document.body.style.overflow = 'hidden'; // Prevent scroll
+            liveBadge.classList.add('hidden');
+            jobStatusBadge.innerText = '';
+            
+            if (logInterval) clearInterval(logInterval);
 
             try {
-                const response = await fetch(`/jobs/${jobId}/logs`, {
-                    headers: { 'x-key': key }
-                });
+                // First fetch logs and status
+                await Promise.all([
+                    refreshLogs(jobId, key),
+                    updateModalStatus(jobId, key)
+                ]);
 
-                if (!response.ok) {
-                    const error = await response.text();
-                    throw new Error(error || `HTTP error! status: ${response.status}`);
+                // If status is processing, start polling
+                const response = await fetch(`/jobs/${jobId}`, { headers: { 'x-key': key } });
+                const job = await response.json();
+                
+                if (job.status === 'processing') {
+                    liveBadge.classList.remove('hidden');
+                    logInterval = setInterval(() => pollLogs(jobId, key), 3000);
                 }
-
-                const logs = await response.text();
-                logContent.innerText = logs;
             } catch (e) {
                 logContent.innerText = 'Error loading logs: ' + e.message;
             }
         }
 
+        async function pollLogs(jobId, key) {
+            try {
+                await refreshLogs(jobId, key);
+                const status = await updateModalStatus(jobId, key);
+                
+                if (status !== 'processing') {
+                    if (logInterval) clearInterval(logInterval);
+                    logInterval = null;
+                    liveBadge.classList.add('hidden');
+                    fetchJobs(); // Refresh main list as job finished
+                }
+            } catch (e) {
+                console.error('Polling error:', e);
+            }
+        }
+
+        async function refreshLogs(jobId, key) {
+            const response = await fetch(`/jobs/${jobId}/logs`, {
+                headers: { 'x-key': key }
+            });
+
+            if (response.ok) {
+                const logs = await response.text();
+                logContent.innerText = logs;
+                scrollToBottom();
+            } else if (response.status !== 404) {
+                throw new Error(`Logs HTTP error! status: ${response.status}`);
+            }
+        }
+
+        async function updateModalStatus(jobId, key) {
+            const response = await fetch(`/jobs/${jobId}`, {
+                headers: { 'x-key': key }
+            });
+
+            if (response.ok) {
+                const job = await response.json();
+                jobStatusBadge.innerText = job.status.toUpperCase();
+                
+                const statusColors = {
+                    'completed': 'bg-green-100 text-green-800',
+                    'failed': 'bg-red-100 text-red-800',
+                    'processing': 'bg-blue-100 text-blue-800'
+                };
+                
+                jobStatusBadge.className = `ml-2 px-2 py-0.5 rounded text-xs font-semibold ${statusColors[job.status] || 'bg-gray-100 text-gray-800'}`;
+                return job.status;
+            }
+            return null;
+        }
+
+        function scrollToBottom() {
+            logContent.scrollTop = logContent.scrollHeight;
+        }
+
         function closeModal() {
+            if (logInterval) {
+                clearInterval(logInterval);
+                logInterval = null;
+            }
             logModal.classList.add('hidden');
             document.body.style.overflow = 'auto'; // Restore scroll
         }
