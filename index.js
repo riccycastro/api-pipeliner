@@ -33,11 +33,11 @@ const COMMAND_CONFIG = yaml.load(fssync.readFileSync('pipeline-config.yml'))
 const app = express()
 app.use(express.json())
 
-// Serve static files from the 'public' directory
-app.use(express.static('public'))
-
 // --- Security Middleware ---
 app.use(securityMiddleware)
+
+// Serve static files from the 'public' directory
+app.use(express.static('public'))
 
 // --- Submit a Job ---
 app.post('/webhook', createRateLimitMiddleware(), async (req, res) => {

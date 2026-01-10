@@ -109,9 +109,10 @@
         }
 
         function getHeaders() {
-            const headers = {
-                'x-key': keyIdInput.value
-            };
+            const headers = {};
+            if (keyIdInput.value) {
+                headers['x-key'] = keyIdInput.value;
+            }
             if (apiKeyInput.value) {
                 headers['x-api-key'] = apiKeyInput.value;
             }
@@ -119,12 +120,7 @@
         }
 
         async function fetchJobs() {
-            const keyId = keyIdInput.value;
             const date = dateFilter.value;
-            if (!keyId) {
-                alert('Please enter a Key ID');
-                return;
-            }
 
             jobsTable.innerHTML = '<tr><td colspan="6" class="py-10 text-center text-gray-500">Loading jobs...</td></tr>';
 
@@ -280,9 +276,7 @@
         });
 
         // Initial fetch
-        if (keyIdInput.value) {
-            fetchJobs();
-        }
+        fetchJobs();
     </script>
 </body>
 </html>
