@@ -101,6 +101,34 @@ The above request would execute your script with the following arguments:
 
 You can access these parameters in your shell script using standard argument parsing.
 
+#### Logging & Verbosity Options
+
+API Pipeliner produces structured logs for every job and stores them under `data/logs/YYYYMM/<jobId>.log`.
+
+- Console output is concise by default: INFO/WARN messages only; ERRORs go to STDERR.
+- Detailed command output (STDOUT/STDERR from child processes) is captured at DEBUG level and written to the job log file. It appears on the console only when `verbose` is enabled.
+
+You can control verbosity per request using the `options` object:
+
+```json
+{
+  "action": "deploy-service",
+  "target": "my-service",
+  "options": {
+    "version": "1.2.3",
+    "verbose": true
+  }
+}
+```
+
+When executing a shell script (via `{ type: file, filename: '...' }`), the worker will automatically append:
+
+- `--log-file=<path>` pointing to the same per-job log file used by the API (so scripts can also write there)
+- `-v` when `options.verbose=true`
+- `-q` when `options.quiet=true`
+
+Your scripts may choose to honor these flags to adjust their own output volume.
+
 #### Using Slugs for Dynamic Command Execution
 
 API Pipeliner supports the use of "slugs" (parameter placeholders) in command definitions, allowing for dynamic command execution. Slugs are denoted using the `$paramName` syntax and are automatically replaced with the corresponding parameter values at runtime.

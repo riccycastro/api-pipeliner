@@ -6,12 +6,16 @@ const path = require('path')
 
 const { jobId, commandSpec, parameters, envVars, options } = workerData
 
-const logger = getLogger('WORKER', jobId)
+const verbose = !!(options && (options.verbose === true || options.verbose === 'true'))
+const quiet = !!(options && (options.quiet === true || options.quiet === 'true'))
 
-logger(`Worker started for job ${jobId}`)
+const logger = getLogger('WORKER', jobId, { verbose, quiet })
+
+logger.info(`Worker started for job ${jobId}`)
+logger.debug(`options=${JSON.stringify(options || {})}`)
 
 process.on('uncaughtException', err => {
-    logger(`UNCAUGHT ERROR: ${err.stack}`)
+    logger.error(`UNCAUGHT ERROR: ${err.stack}`)
     process.exit(1)
 });
 
@@ -27,7 +31,7 @@ function interpolateEnv(str) {
         const key = var1 || var2
         const value = envVars[key]
         if (value === undefined) {
-            logToFile(`WARNING: Environment variable ${key} is undefined`)
+            logger.warn(`Environment variable ${key} is undefined`)
             return ''
         }
         return value
@@ -51,7 +55,7 @@ async function run() {
                 // Step 2: Replace environment variables
                 cmd = interpolateEnv(cmd)
 
-                logger(`Executing: ${cmd}`)
+                logger.info(`Executing: ${cmd}`)
 
                 // Handle object command (e.g., file execution)
             } else if (
@@ -59,7 +63,10 @@ async function run() {
                 && cmdEntry.type === 'file'
                 && cmdEntry.filename
             ) {
-                checkCommandFileExists(cmdEntry.filename)
+                const exists = checkCommandFileExists(cmdEntry.filename)
+                if (!exists) {
+                    throw new Error(`Command file not found: ${cmdEntry.filename}`)
+                }
                 const filename = path.join(getCommandsDir(), cmdEntry.filename)
 
                 // Ensure the file is executable
@@ -70,12 +77,21 @@ async function run() {
                     });
                 });
 
-                const paramsString = Object.entries(options)
+                // Build CLI params from options, skipping known toggles we inject separately
+                const skipKeys = new Set(['verbose', 'quiet', 'log-file', 'log_file'])
+                const optPairs = Object.entries(options || {})
+                    .filter(([key]) => !skipKeys.has(key))
                     .map(([key, value]) => `--${key}=${value}`)
-                    .join(' ');
+                const injected = []
+                if (verbose) injected.push('-v')
+                if (quiet) injected.push('-q')
+                const logFileArg = `--log-file=${logger.filePath}`
+                injected.push(logFileArg)
+
+                const paramsString = [...optPairs, ...injected].join(' ')
 
                 cmd = `${filename} ${paramsString}`
-                logger(`Executing file: ${cmd}`)
+                logger.info(`Executing file: ${cmd}`)
 
             } else {
                 throw new Error(`Unsupported command entry: ${JSON.stringify(cmdEntry)}`)
@@ -88,27 +104,31 @@ async function run() {
                     timeout: 600000 // 10 minutes
                 });
 
-                child.stdout.on('data', data =>
-                    logger(`STDOUT: ${data.toString().trim()}`))
+                child.stdout.on('data', data => {
+                    const text = data.toString()
+                    if (text.trim()) logger.debug(text.trim())
+                })
 
-                child.stderr.on('data', data =>
-                    logger(`STDERR: ${data.toString().trim()}`))
+                child.stderr.on('data', data => {
+                    const text = data.toString()
+                    if (text.trim()) logger.debug(text.trim())
+                })
 
                 child.on('exit', (code, signal) => {
                     if (code !== 0) {
-                        logger(`Command failed with code ${code} (signal: ${signal})`)
+                        logger.error(`Command failed with code ${code} (signal: ${signal})`)
                         reject(new Error(`Command failed: ${cmd}`))
                     } else {
-                        logger(`Command succeeded`)
+                        logger.info(`Command succeeded`)
                         resolve()
                     }
                 })
             })
         }
 
-        logger(`All commands completed successfully`)
+        logger.info(`All commands completed successfully`)
     } catch (err) {
-        logger(`FATAL ERROR: ${err.message}\n${err.stack}`)
+        logger.error(`FATAL ERROR: ${err.message}\n${err.stack}`)
         process.exit(1)
     }
 }

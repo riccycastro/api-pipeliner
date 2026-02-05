@@ -199,7 +199,7 @@
                 
                 if (job.status === 'processing') {
                     liveBadge.classList.remove('hidden');
-                    logInterval = setInterval(() => pollLogs(jobId), 3000);
+                    logInterval = setInterval(() => pollLogs(jobId), 1000);
                 }
             } catch (e) {
                 logContent.innerText = 'Error loading logs: ' + e.message;
