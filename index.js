@@ -176,6 +176,6 @@ app.get('/jobs/:id/logs', createRateLimitMiddleware({max: 60, windowMs: 60 * 100
 
 // --- Start server ---
 const PORT = process.env.PORT || 3000
-app.listen(PORT, () => {
+app.listen(PORT, '0.0.0.0', () => {
     console.log(`Pipeline API running on port ${PORT}`)
 })
