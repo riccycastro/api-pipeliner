@@ -36,13 +36,14 @@
                             <th class="py-3 px-6 text-left">Triggered By</th>
                             <th class="py-3 px-6 text-left">Action</th>
                             <th class="py-3 px-6 text-left">Target</th>
+                            <th class="py-3 px-6 text-left">Options</th>
                             <th class="py-3 px-6 text-left">Status</th>
                             <th class="py-3 px-6 text-center">Actions</th>
                         </tr>
                     </thead>
                     <tbody id="jobsTable" class="text-gray-600 text-sm font-light">
                         <tr>
-                            <td colspan="6" class="py-10 text-center text-gray-400">Enter API Key and click Refresh to load jobs</td>
+                            <td colspan="7" class="py-10 text-center text-gray-400">Enter API Key and click Refresh to load jobs</td>
                         </tr>
                     </tbody>
                 </table>
@@ -122,7 +123,7 @@
         async function fetchJobs() {
             const date = dateFilter.value;
 
-            jobsTable.innerHTML = '<tr><td colspan="6" class="py-10 text-center text-gray-500">Loading jobs...</td></tr>';
+            jobsTable.innerHTML = '<tr><td colspan="7" class="py-10 text-center text-gray-500">Loading jobs...</td></tr>';
 
             try {
                 const response = await fetch(`/jobs?date=${date}`, {
@@ -138,13 +139,33 @@
                 renderJobs(jobs);
             } catch (e) {
                 console.error('Error fetching jobs:', e);
-                jobsTable.innerHTML = `<tr><td colspan="6" class="py-10 text-center text-red-500">Error: ${e.message}</td></tr>`;
+                jobsTable.innerHTML = `<tr><td colspan="7" class="py-10 text-center text-red-500">Error: ${e.message}</td></tr>`;
             }
+        }
+
+        function renderOptions(options) {
+            if (!options || Object.keys(options).length === 0) return '-';
+            
+            const parts = [];
+            if (options.branch_or_tag) {
+                parts.push(`<div class="font-bold text-blue-700">${options.branch_or_tag}</div>`);
+            }
+            
+            const others = Object.entries(options)
+                .filter(([key, value]) => key !== 'branch_or_tag' && value !== 'No')
+                .map(([key, value]) => `<span class="text-gray-400">${key}:</span>${value}`)
+                .join(' ');
+            
+            if (others) {
+                parts.push(`<div class="text-[10px] text-gray-500 truncate max-w-xs" title="${Object.entries(options).map(([k,v]) => k+': '+v).join(', ')}">${others}</div>`);
+            }
+            
+            return parts.join('') || '-';
         }
 
         function renderJobs(jobs) {
             if (jobs.length === 0) {
-                jobsTable.innerHTML = '<tr><td colspan="6" class="py-10 text-center text-gray-400">No jobs found for this period</td></tr>';
+                jobsTable.innerHTML = '<tr><td colspan="7" class="py-10 text-center text-gray-400">No jobs found for this period</td></tr>';
                 return;
             }
 
@@ -164,6 +185,7 @@
                     <td class="py-3 px-6 text-left">${job.triggered_by || '-'}</td>
                     <td class="py-3 px-6 text-left">${job.action}</td>
                     <td class="py-3 px-6 text-left">${job.target}</td>
+                    <td class="py-3 px-6 text-left">${renderOptions(job.options)}</td>
                     <td class="py-3 px-6 text-left">
                         <span class="${statusClass} py-1 px-3 rounded-full text-xs font-semibold">${job.status}</span>
                     </td>
