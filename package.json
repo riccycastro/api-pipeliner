@@ -15,6 +15,7 @@
   },
   "scripts": {
     "dev": "nodemon --ignore data index.js",
-    "prod": "node index.js"
+    "prod": "node index.js",
+    "cli": "node cli.js"
   }
 }

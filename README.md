@@ -405,6 +405,25 @@ Production mode:
 npm run prod
 ```
 
+### Running Commands from the CLI
+
+Instead of triggering commands over the webhook (e.g. from GitHub Actions), you can run them directly from the terminal on the host. This executes the job in-process — no running server, API key, or network hop required — and streams the command output live.
+
+```bash
+npm run cli
+# or: node cli.js [command-name]
+```
+
+You'll be prompted for:
+- Which command to run (from `pipeline-config.yml`)
+- Target / service name
+- Branch
+- Tag (optional)
+- Whether to run `composer install`
+- Whether to run migrations
+
+These answers are passed to the command as `options` (`branch`, `tag`, `composer`, `migrations`) and `target`, the same way a webhook request would, so existing command/script definitions work unchanged. The run is recorded as a job under `data/jobs/` and `data/logs/` just like webhook-triggered runs, and is visible via `GET /jobs/:id` if the server is running.
+
 ### API Endpoints
 
 #### Trigger a Command

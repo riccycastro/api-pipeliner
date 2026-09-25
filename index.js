@@ -2,8 +2,6 @@ const express = require('express')
 const fs = require('fs').promises
 const fssync = require('fs')
 const path = require('path')
-const {Worker} = require('worker_threads')
-const uuid = require('uuid')
 const yaml = require('js-yaml')
 const dotenv = require('dotenv')
 const {
@@ -11,7 +9,7 @@ const {
     findLogsFileRecursively,
     findJobFileRecursively
 } = require('./tools/dir')
-const getLogger = require('./tools/logger')
+const {startJob} = require('./tools/run-job')
 
 console.log('Loading environment variables...')
 dotenv.config({path: path.join(__dirname, '.env')})
@@ -43,72 +41,19 @@ app.use(express.static('public'))
 app.post('/webhook', createRateLimitMiddleware(), async (req, res) => {
     console.log(req.body)
 
-    // Directories for job data and logs
-    const JOBS_DIR = getJobsDir()
-
-    const jobId = uuid.v4()
-    const jobFile = path.join(JOBS_DIR, `${jobId}.json`)
-
-    const logger = getLogger('MAIN', jobId)
-
     const {action, target, options = {}, triggered_by} = req.body
 
-    const commandSpec = COMMAND_CONFIG.commands[action]
-    if (!commandSpec) {
-        return res.status(400).json({error: 'Invalid action specified'})
+    let job
+    try {
+        job = await startJob({action, target, options, triggered_by, commandConfig: COMMAND_CONFIG})
+    } catch (e) {
+        return res.status(400).json({error: e.message})
     }
-
-    // Compose parameters for the command
-    const parameters = {...options, service_name: target}
-
-    // Save job metadata
-    const jobMeta = {
-        id: jobId,
-        created: new Date().toISOString(),
-        status: 'processing',
-        triggered_by,
-        action,
-        target,
-        options,
-    }
-    await fs.writeFile(jobFile, JSON.stringify(jobMeta, null, 2))
-
-    // Start background worker
-    const worker = new Worker(path.join(__dirname, 'workers/command-worker.js'), {
-        workerData: {
-            jobId,
-            commandSpec,
-            parameters,
-            jobFile,
-            options,
-            envVars: process.env,
-        }
-    })
-
-    worker.on('exit', async code => {
-        logger(`Worker exited with code ${code}`)
-
-        // Update job status
-        const status = code === 0 ? 'completed' : 'failed'
-        try {
-            const jobRaw = await fs.readFile(jobFile, 'utf8')
-            const job = JSON.parse(jobRaw)
-            job.status = status
-            job.completed = new Date().toISOString()
-            await fs.writeFile(jobFile, JSON.stringify(job, null, 2))
-        } catch (e) {
-            // Ignore update errors
-        }
-    })
-
-    worker.on('error', error => {
-        logger(`Worker error: ${error.message}`)
-    })
 
     res.status(202).json({
-        jobId,
-        statusUrl: `/jobs/${jobId}`,
-        logUrl: `/jobs/${jobId}/logs`
+        jobId: job.jobId,
+        statusUrl: job.statusUrl,
+        logUrl: job.logUrl,
     })
 })
 
