@@ -26,8 +26,8 @@ function loadCommandConfig() {
 async function askYesNo(rl, question, defaultValue) {
     const hint = defaultValue ? 'Y/n' : 'y/N'
     const answer = (await rl.question(`${question} [${hint}]: `)).trim().toLowerCase()
-    if (!answer) return defaultValue
-    return answer === 'y' || answer === 'yes'
+    const isYes = answer ? (answer === 'y' || answer === 'yes') : defaultValue
+    return isYes ? 'Yes' : 'No'
 }
 
 async function pickCommand(rl, commandConfig, preselected) {
@@ -58,14 +58,15 @@ async function main() {
         const action = await pickCommand(rl, commandConfig, process.argv[2])
 
         const target = (await rl.question('Target / service name (optional): ')).trim()
-        const branch = (await rl.question('Branch [main]: ')).trim() || 'main'
-        const tag = (await rl.question('Tag (optional, leave blank to skip): ')).trim()
+        const branch_or_tag = (await rl.question('Branch or tag: ')).trim()
         const composer = await askYesNo(rl, 'Run composer install?', false)
-        const migrations = await askYesNo(rl, 'Run migrations?', false)
+        const migration = await askYesNo(rl, 'Run migrations?', false)
+        const tenant_migration = await askYesNo(rl, 'Run tenant migrations?', false)
+        const build_assets = await askYesNo(rl, 'Build assets?', false)
 
         rl.close()
 
-        const options = {branch, tag, composer, migrations, verbose: true}
+        const options = {branch_or_tag, composer, migration, tenant_migration, build_assets, verbose: true}
 
         console.log(`\nStarting "${action}"${target ? ` on "${target}"` : ''}...\n`)
 

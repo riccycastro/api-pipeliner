@@ -417,12 +417,13 @@ npm run cli
 You'll be prompted for:
 - Which command to run (from `pipeline-config.yml`)
 - Target / service name
-- Branch
-- Tag (optional)
+- Branch or tag
 - Whether to run `composer install`
 - Whether to run migrations
+- Whether to run tenant migrations
+- Whether to build assets
 
-These answers are passed to the command as `options` (`branch`, `tag`, `composer`, `migrations`) and `target`, the same way a webhook request would, so existing command/script definitions work unchanged. The run is recorded as a job under `data/jobs/` and `data/logs/` just like webhook-triggered runs, and is visible via `GET /jobs/:id` if the server is running.
+These answers are passed to the command as `options` (`branch_or_tag`, `composer`, `migration`, `tenant_migration`, `build_assets`, each `"Yes"`/`"No"` except `branch_or_tag`) and `target`, the same way a webhook request would, so existing command/script definitions work unchanged. The run is recorded as a job under `data/jobs/` and `data/logs/` just like webhook-triggered runs, and is visible via `GET /jobs/:id` if the server is running.
 
 ### API Endpoints
 
