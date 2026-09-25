@@ -30,6 +30,15 @@ async function askYesNo(rl, question, defaultValue) {
     return isYes ? 'Yes' : 'No'
 }
 
+async function askEnvironment(rl) {
+    const answer = (await rl.question('Environment (dev/prod) [dev]: ')).trim().toLowerCase()
+    if (!answer) return 'dev'
+    if (answer !== 'dev' && answer !== 'prod') {
+        throw new Error(`Invalid environment: ${answer} (expected "dev" or "prod")`)
+    }
+    return answer
+}
+
 async function pickCommand(rl, commandConfig, preselected) {
     const commandNames = Object.keys(commandConfig.commands || {})
     if (commandNames.length === 0) {
@@ -58,6 +67,7 @@ async function main() {
         const action = await pickCommand(rl, commandConfig, process.argv[2])
 
         const target = (await rl.question('Target / service name (optional): ')).trim()
+        const environment = await askEnvironment(rl)
         const branch_or_tag = (await rl.question('Branch or tag: ')).trim()
         const composer = await askYesNo(rl, 'Run composer install?', false)
         const migration = await askYesNo(rl, 'Run migrations?', false)
@@ -66,7 +76,7 @@ async function main() {
 
         rl.close()
 
-        const options = {branch_or_tag, composer, migration, tenant_migration, build_assets, verbose: true}
+        const options = {environment, branch_or_tag, composer, migration, tenant_migration, build_assets, verbose: true}
 
         console.log(`\nStarting "${action}"${target ? ` on "${target}"` : ''}...\n`)
 

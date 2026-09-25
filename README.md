@@ -417,13 +417,16 @@ npm run cli
 You'll be prompted for:
 - Which command to run (from `pipeline-config.yml`)
 - Target / service name
+- Environment (`dev`/`prod`)
 - Branch or tag
 - Whether to run `composer install`
 - Whether to run migrations
 - Whether to run tenant migrations
 - Whether to build assets
 
-These answers are passed to the command as `options` (`branch_or_tag`, `composer`, `migration`, `tenant_migration`, `build_assets`, each `"Yes"`/`"No"` except `branch_or_tag`) and `target`, the same way a webhook request would, so existing command/script definitions work unchanged. The run is recorded as a job under `data/jobs/` and `data/logs/` just like webhook-triggered runs, and is visible via `GET /jobs/:id` if the server is running.
+These answers are passed to the command as `options` (`environment`, `branch_or_tag`, `composer`, `migration`, `tenant_migration`, `build_assets`, each `"Yes"`/`"No"` except `environment`/`branch_or_tag`) and `target`, the same way a webhook request would, so existing command/script definitions work unchanged. The run is recorded as a job under `data/jobs/` and `data/logs/` just like webhook-triggered runs, and is visible via `GET /jobs/:id` if the server is running.
+
+`environment` matters beyond routing: deploy scripts commonly use it to decide things like which app version to record (e.g. tag vs. commit hash) or which host to target for cache resets — don't skip it just because it looks like a formality.
 
 ### API Endpoints
 
